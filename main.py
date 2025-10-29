@@ -35,7 +35,7 @@ class GroupDaily(Star):
             logger.error(f"保存记录文件失败: {e}")
     @filter.command("签到")
     async def handle_sign_in(self, event: AstrMessageEvent):
-        user_id = event.user_id
+        user_id = event.event.get_sender_id()
         if user_id not in self.records:
             self.records[user_id] = {"date": "", "score": 0}
         self.records[user_id]["date"] = time.strftime("%Y-%m-%d", time.localtime())
@@ -46,7 +46,7 @@ class GroupDaily(Star):
         return
     @filter.command("查询数量")
     async def handle_query_score(self, event: AstrMessageEvent):
-        user_id = event.user_id
+        user_id = event.event.get_sender_id()
         if user_id in self.records:
             score = self.records[user_id]["score"]
             yield event.plain_result(f"您的当前小鱼干数量为：{score}")
