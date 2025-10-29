@@ -38,6 +38,9 @@ class GroupDaily(Star):
         user_id = event.get_sender_id()
         if user_id not in self.records:
             self.records[user_id] = {"date": "", "score": 0}
+        if self.records[user_id]["date"] == time.strftime("%Y-%m-%d", time.localtime()):
+            yield event.plain_result("您今天已经签到过了，明天再来吧！")
+            return
         self.records[user_id]["date"] = time.strftime("%Y-%m-%d", time.localtime())
         r = random.randint(10, 200)
         self.records[user_id]["score"] += r
