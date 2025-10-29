@@ -18,7 +18,7 @@ class GroupDaily(Star):
         logger.info("群聊签到插件已加载")
     def _load_records(self):
         try:
-            if path.exists(self.records_file):
+            if os.path.exists(self.records_file):
                 with open(self.records_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             return {"date": "", "score": ""}
@@ -31,4 +31,30 @@ class GroupDaily(Star):
                 json.dump(self.records, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.error(f"保存记录文件失败: {e}")
-    
+    @filter("签到")
+    async def handle_sign_in(self, event: AstrMessageEvent):
+        user_id = event.user_id
+        if user_id not in self.records:
+            self.records[user_id] = {"date": "", "score": 0}
+        self.records[user_id]["date"] = time.strftime("%Y-%m-%d", time.localtime())
+        r = random.randint(10, 200)
+        self.records[user_id]["score"] += r
+        self._save_records()
+        yield event.plain_result(f"签到成功！今天获得{r}个小鱼干，当前小鱼干数量：{self.records[user_id]['score']}")
+        return
+    @filter("查询数量")
+    async def handle_query_score(self, event: AstrMessageEvent):
+        user_id = event.user_id
+        if user_id in self.records:
+            score = self.records[user_id]["score"]
+            yield event.plain_result(f"您的当前小鱼干数量为：{score}")
+            return
+        else:
+            yield event.plain_result("您还没有签到记录，快去签到吧！")
+            return
+    async def terminate(self):
+        try:
+            self._save_records()
+            logger.info("群聊签到插件资源已清理完毕")
+        except Exception as e:
+            logger.error(f"插件终止时出现错误: {e}")
