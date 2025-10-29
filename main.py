@@ -9,9 +9,8 @@ import random
 
 @register("groupdaily","BoilingFish","一个简单的群聊签到插件","Beta1.0","https://github.com/BoilingFish9527/astrbot_plugin_groupdaily")
 class GroupDaily(Star):
-    def __init__(self,context:Context,config:AstrBotConfig):
+    def __init__(self,context:Context):
         super().__init__(context)
-        self.config = config
         self.data_dir = os.path.join("data", "plugins", "group_daily")
         self_records_file = os.path.join(self.data_dir, "daily_records.json")
         os.makedirs(self.data_dir, exist_ok=True)
