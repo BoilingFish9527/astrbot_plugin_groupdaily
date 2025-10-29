@@ -1,24 +1,60 @@
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
+import os
+import json
+import random
+from datetime import datetime
+from typing import List, Dict, Any
+from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
-from astrbot.api import logger
+from astrbot.api import logger, AstrBotConfig
+from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import AiocqhttpMessageEvent 
+import astrbot.api.message_components as Comp
 
-@register("helloworld", "YourName", "一个简单的 Hello World 插件", "1.0.0")
-class MyPlugin(Star):
-    def __init__(self, context: Context):
+@register("签到", "沸腾鱼", "一个简单的签到插件", "Beta1.0")
+class GroupDaily(Star):
+    def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
-
-    async def initialize(self):
-        """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
-
-    # 注册指令的装饰器。指令名为 helloworld。注册成功后，发送 `/helloworld` 就会触发这个指令，并回复 `你好, {user_name}!`
-    @filter.command("helloworld")
-    async def helloworld(self, event: AstrMessageEvent):
-        """这是一个 hello world 指令""" # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
-        user_name = event.get_sender_name()
-        message_str = event.message_str # 用户发的纯文本消息字符串
-        message_chain = event.get_messages() # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-        logger.info(message_chain)
-        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
-
+        self.config = config # 保存从框架传入的配置对象，用于后续读取用户配置
+        self.data_dir = os.path.join("data", "plugins", "groupdaily") # 构建数据存储目录路径（/bot目录/data/plugins/groupdaily）
+        self.records_file = os.path.join(self.data_dir, "groupdailyrecords.json")
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.records = self._load_records()
+        logger.info("插件已加载")
+    def _load_records(self) -> Dict[str, Any]:
+        try: 
+            if os.path.exists(self.records_file):
+                with open(self.records_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return {"score":"","date":""}
+        except Exception as e:
+            logger.error(f"加载记录文件失败: {e}")
+            return {"score":"","date":""}
+    def _save_records(self):
+        try:
+            with open(self.records_file, 'w', encoding='utf-8') as f:
+                json.dump(self.records, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"保存记录文件失败: {e}")
+    def _is_new_day(self) -> bool:
+        today = datetime.now().strftime("%Y-%m-%d")
+        return self.records.get("date") != today
+    @filter.command("签到")
+    async def sign(self, event: AstrMessageEvent):
+        async for result in self.sign_common(event, with_at=False):
+            yield result
+    async def sign_common(self, event, with_at=False):
+        user_id = event.get_sender_id()
+        if self._is_new_day():
+            self.records["date"] = datetime.now().strftime("%Y-%m-%d")
+            r = random.randint(10,100)
+            self.records["score"] = str(int(self.records.get("score")) + r)
+            yield event.plain_result(f"签到成功！获得小鱼干{r}，当前总小鱼干数量：{self.records['score']}")
+            return
+        else:
+            yield event.plain_result("今日已签到，明日再来吧！")
+            return
     async def terminate(self):
-        """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
+        try:
+            self._save_records()
+            logger.info("签到插件资源已清理完毕")
+        except Exception as e:
+            logger.error(f"插件终止时出现错误: {e}")
