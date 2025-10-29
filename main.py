@@ -1,6 +1,8 @@
-from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
-from astrbot.api.star import Context, Star, register
+from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.star import Context, Star
 from astrbot.api import logger
+from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import AiocqhttpMessageEvent 
+import astrbot.api.message_components as Comp
 import os
 import json
 import time
@@ -31,7 +33,7 @@ class GroupDaily(Star):
                 json.dump(self.records, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.error(f"保存记录文件失败: {e}")
-    @filter("签到")
+    @filter.command("签到")
     async def handle_sign_in(self, event: AstrMessageEvent):
         user_id = event.user_id
         if user_id not in self.records:
@@ -42,7 +44,7 @@ class GroupDaily(Star):
         self._save_records()
         yield event.plain_result(f"签到成功！今天获得{r}个小鱼干，当前小鱼干数量：{self.records[user_id]['score']}")
         return
-    @filter("查询数量")
+    @filter.command("查询数量")
     async def handle_query_score(self, event: AstrMessageEvent):
         user_id = event.user_id
         if user_id in self.records:
