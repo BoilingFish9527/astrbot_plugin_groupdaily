@@ -15,7 +15,7 @@ class GroupDaily(Star):
     def __init__(self,context:Context):
         super().__init__(context)
         self.data_dir = os.path.join("data", "plugins", "group_daily")
-        self_records_file = os.path.join(self.data_dir, "daily_records.json")
+        self.records_file = os.path.join(self.data_dir, "daily_records.json")
         os.makedirs(self.data_dir, exist_ok=True)
         self.records = self._load_records()
         logger.info("群聊签到插件已加载")
